@@ -1,10 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .submodule import one_hot
+
 from spatial_correlation_sampler import SpatialCorrelationSampler
+
+from .submodule import one_hot
 from .deform_im2col_util import deform_im2col
-import pdb
+
 
 class Colorizer(nn.Module):
     def __init__(self, D=4, R=6, C=32):

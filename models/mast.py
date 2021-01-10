@@ -1,11 +1,11 @@
-import torch
+import numpy as np
+
 import torch.nn as nn
 
-import pdb
 from .submodule import ResNet18
 from .colorizer import Colorizer
+from .colorizer_v2 import Colorizer as Colorizer_V2
 
-import numpy as np
 
 class MAST(nn.Module):
     def __init__(self, args):
@@ -22,13 +22,16 @@ class MAST(nn.Module):
 
         # Use smaller R for faster training
         if args.training:
-            self.R = 6
+            self.R = args.radius
         else:
             self.R = 12
 
-        self.colorizer = Colorizer(self.D, self.R, self.C)
+        if args.use_clv2:
+            self.colorizer = Colorizer_V2(self.D, self.R, self.C)
+        else:
+            self.colorizer = Colorizer(self.D, self.R, self.C)
 
-    def forward(self, rgb_r, quantized_r, rgb_t, ref_index=None,current_ind=None):
+    def forward(self, rgb_r, quantized_r, rgb_t, ref_index=None, current_ind=None):
         feats_r = [self.post_convolution(self.feature_extraction(rgb)) for rgb in rgb_r]
         feats_t = self.post_convolution(self.feature_extraction(rgb_t))
 

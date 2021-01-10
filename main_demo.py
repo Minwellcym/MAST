@@ -23,50 +23,58 @@ mpl.use('Agg')
 parser = argparse.ArgumentParser(description='MAST')
 
 # Data options
-parser.add_argument('--datapath', default='/scratch/local/ramdisk/zlai/oxuva/all/',
-                    help='Data path for Kinetics')
-parser.add_argument('--validpath',
-                    help='Data path for Davis')
-parser.add_argument('--csvpath', default='functional/feeder/dataset/ytvos.csv',
-                    help='Path for csv file')
-parser.add_argument('--savepath', type=str, default='results/test',
-                    help='Path for checkpoints and logs')
-parser.add_argument('--resume', type=str, default=None,
-                    help='Checkpoint file to resume')
+parser.add_argument('--data-path', default='/data/tracking/youtube_vos/all_frames/train_all_frames/JPEGImages/',
+                    help='Data path for YoutubeVOS')
+parser.add_argument('--valid-path', help='Data path for Davis')
+parser.add_argument('--csv-path', default='functional/feeder/dataset/ytvos.csv', help='Path for csv file')
+parser.add_argument('--save-path', type=str, default='/data/tracking//test', help='Path for checkpoints and logs')
+parser.add_argument('--resume', type=str, default=None, help='Checkpoint file to resume')
+
+# Model options
+parser.add_argument('--radius', type=int, default=6, help='source radius while training')
+parser.add_argument('--feat-dim', type=int, default=64, help='feature dim')
+parser.add_argument('--use-clv2', default=False, action="store_true")
 
 # Training options
-parser.add_argument('--epochs', type=int, default=20,
-                    help='number of epochs to train')
-parser.add_argument('--lr', type=float, default=1e-3,
-                    help='learning rate')
-parser.add_argument('--bsize', type=int, default=12,
-                    help='batch size for training (default: 12)')
-parser.add_argument('--worker', type=int, default=12,
-                    help='number of dataloader threads')
+parser.add_argument('--epochs', type=int, default=20, help='number of epochs to train')
+parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
+parser.add_argument('--optim', type=str, default="adam", help='optimizer')
+parser.add_argument('--bsize', type=int, default=24, help='batch size for training (default: 24)')
+parser.add_argument('--worker', type=int, default=12, help='number of dataloader threads')
 
 args = parser.parse_args()
 
 def main():
     args.training = True
 
-    if not os.path.isdir(args.savepath):
-        os.makedirs(args.savepath)
-    log = logger.setup_logger(args.savepath + '/training.log')
-    writer = SummaryWriter(args.savepath + '/runs/')
+    if not os.path.isdir(args.save_path):
+        os.makedirs(args.save_path)
+    log = logger.setup_logger(args.save_path + '/training.log')
+    writer = SummaryWriter(args.save_path + '/runs/')
 
     for key, value in sorted(vars(args).items()):
         log.info(str(key) + ': ' + str(value))
 
-    TrainData = Y.dataloader(args.csvpath)
+    TrainData = Y.dataloader(args.csv_path)
     TrainImgLoader = torch.utils.data.DataLoader(
-        YL.myImageFloder(args.datapath, TrainData, True),
-        batch_size=args.bsize, shuffle=True, num_workers=args.worker,drop_last=True
+        YL.myImageFloder(args.data_path, TrainData, True),
+        batch_size=args.bsize, shuffle=True, num_workers=args.worker, drop_last=True
     )
     log.info("Dataloader info: {} batches".format(len(TrainImgLoader)))
 
+    import ipdb; ipdb.set_trace()
     model = MAST(args).cuda()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9,0.999))
+    optim = args.optim
+    params = model.parameters()
+    if optim == "adam":
+        optimizer = torch.optim.Adam(params, lr=args.lr)
+    elif optim == "adagrad":
+        optimizer = torch.optim.Adagrad(params, lr=args.lr)
+    elif optim == "adamw":
+        optimizer = torch.optim.AdamW(params, lr=args.lr)
+    else:
+        raise ValueError
 
     log.info('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
 
@@ -90,9 +98,9 @@ def main():
         log.info('This is {}-th epoch'.format(epoch))
         train(TrainImgLoader, model, optimizer, log, writer, epoch)
 
-        TrainData = Y.dataloader(args.csvpath, epoch)
+        TrainData = Y.dataloader(args.csv_path, epoch)
         TrainImgLoader = torch.utils.data.DataLoader(
-            YL.myImageFloder(args.datapath, TrainData, True),
+            YL.myImageFloder(args.data_path, TrainData, True),
             batch_size=args.bsize, shuffle=True, num_workers=args.worker, drop_last=True
         )
 
@@ -136,8 +144,8 @@ def train(dataloader, model, optimizer, log, writer, epoch):
             lr_now = param_group['lr']
 
         if b_i % 20 == 0:
-            log.info('Epoch{} [{}/{}] {} T={:.2f}  LR={:.6f}'.format(
-                epoch, b_i, n_b, info, b_t, lr_now))
+            log.info('Epoch{} [{}/{}] {} T={:.2f}  LR={:.6f}'\
+                .format(epoch, b_i, n_b, info, b_t, lr_now))
 
         if (b_i * args.bsize) % 2000 < args.bsize:
             b = 0
@@ -169,7 +177,7 @@ def train(dataloader, model, optimizer, log, writer, epoch):
         n_iter = b_i + n_b * epoch
 
     log.info("Saving checkpoint.")
-    savefilename = args.savepath + f'/checkpoint_epoch_{epoch}.pt'
+    savefilename = args.save_path + f'/checkpoint_epoch_{epoch}.pt'
     torch.save({
         'epoch': epoch,
         'state_dict': model.module.state_dict(),
@@ -183,7 +191,6 @@ def compute_lphoto(model, image_lab, images_rgb_, ch):
     ref_y = [rgb[:,ch] for rgb in images_rgb_[:-1]]  # [y1, y2, y3]
     tar_x = image_lab[-1]  # im4
     tar_y = images_rgb_[-1][:,ch]  # y4
-
 
     outputs = model(ref_x, ref_y, tar_x, [0,2], 4)   # only train with pairwise data
 
