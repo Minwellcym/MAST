@@ -10,16 +10,19 @@ class ResidualBlock(nn.Module):
     def __init__(self, inchannel, outchannel, stride=1, kernel_size=3, activation=F.relu):
         super(ResidualBlock, self).__init__()
         self.left = nn.Sequential(
-            nn.Conv2d(inchannel, outchannel, kernel_size=kernel_size, stride=stride, padding=(kernel_size-1)//2, bias=False),
+            nn.Conv2d(inchannel, outchannel, kernel_size=kernel_size,
+                      stride=stride, padding=(kernel_size-1)//2, bias=False),
             nn.BatchNorm2d(outchannel),
             nn.ReLU(inplace=True),
-            nn.Conv2d(outchannel, outchannel, kernel_size=kernel_size, stride=1, padding=(kernel_size-1)//2, bias=False),
+            nn.Conv2d(outchannel, outchannel, kernel_size=kernel_size,
+                      stride=1, padding=(kernel_size-1)//2, bias=False),
             nn.BatchNorm2d(outchannel)
         )
         self.shortcut = nn.Sequential()
         if stride != 1 or inchannel != outchannel:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(inchannel, outchannel, kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(
+                    inchannel, outchannel, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(outchannel)
             )
         self.activation = activation
@@ -30,12 +33,14 @@ class ResidualBlock(nn.Module):
         out = self.activation(out)
         return out
 
+
 class ResNet18(nn.Module):
     def __init__(self, in_ch=1):
         super(ResNet18, self).__init__()
         self.inchannel = 64
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_ch, 64, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.Conv2d(in_ch, 64, kernel_size=7,
+                      stride=2, padding=3, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
@@ -44,7 +49,6 @@ class ResNet18(nn.Module):
         self.layer2 = self.make_layer(ResidualBlock, 128, 2, stride=2)
         self.layer3 = self.make_layer(ResidualBlock, 256, 2, stride=1)
         self.layer4 = self.make_layer(ResidualBlock, 256, 2, stride=1)
-
 
     def make_layer(self, block, channels, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -65,10 +69,12 @@ class ResNet18(nn.Module):
 
 def one_hot(labels, C):
     one_hot = torch.zeros(labels.size(0), C, labels.size(2), labels.size(3))
-    if labels.is_cuda: one_hot = one_hot.cuda()
+    if labels.is_cuda:
+        one_hot = one_hot.cuda()
 
     target = one_hot.scatter_(1, labels, 1)
-    if labels.is_cuda: target = target.cuda()
+    if labels.is_cuda:
+        target = target.cuda()
 
     return target
 
@@ -78,7 +84,8 @@ class ResNet18NoStride(nn.Module):
         super(ResNet18NoStride, self).__init__()
         self.inchannel = 64
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_ch, 64, kernel_size=7, stride=1, padding=3, bias=False),
+            nn.Conv2d(in_ch, 64, kernel_size=7,
+                      stride=1, padding=3, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
@@ -89,7 +96,6 @@ class ResNet18NoStride(nn.Module):
         self.pool2 = nn.MaxPool2d(2)
         self.layer3 = self.make_layer(ResidualBlock, 256, 2, stride=1)
         self.layer4 = self.make_layer(ResidualBlock, 256, 2, stride=1)
-
 
     def make_layer(self, block, channels, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -111,12 +117,14 @@ class ResNet18NoStride(nn.Module):
         out = self.layer4(out)
         return out
 
+
 class ResNet18NoStride1x1(nn.Module):
     def __init__(self, in_ch=1):
         super(ResNet18NoStride1x1, self).__init__()
         self.inchannel = 64
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_ch, 64, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.Conv2d(in_ch, 64, kernel_size=1,
+                      stride=1, padding=0, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
@@ -127,7 +135,6 @@ class ResNet18NoStride1x1(nn.Module):
         self.pool2 = nn.MaxPool2d(2)
         self.layer3 = self.make_layer(ResidualBlock, 32, 2, stride=1)
         self.layer4 = self.make_layer(ResidualBlock, 64, 2, stride=1)
-
 
     def make_layer(self, block, channels, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -150,16 +157,19 @@ class ResNet18NoStride1x1(nn.Module):
 
 def one_hot(labels, C):
     one_hot = torch.zeros(labels.size(0), C, labels.size(2), labels.size(3))
-    if labels.is_cuda: one_hot = one_hot.cuda()
+    if labels.is_cuda:
+        one_hot = one_hot.cuda()
 
     target = one_hot.scatter_(1, labels, 1)
-    if labels.is_cuda: target = target.cuda()
+    if labels.is_cuda:
+        target = target.cuda()
 
     return target
 
 
-
 """ Dense Feature Extractor Network """
+
+
 def preconv2d(in_planes, out_planes, kernel_size, stride, pad, dilation=1, bn=True):
     if bn:
         return nn.Sequential(
@@ -171,9 +181,10 @@ def preconv2d(in_planes, out_planes, kernel_size, stride, pad, dilation=1, bn=Tr
             nn.ReLU(inplace=True),
             nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=dilation if dilation > 1 else pad, dilation=dilation, bias=False))
 
+
 class BasicDenseLayer(nn.Module):
 
-    def __init__(self, inplanes, planes, stride = 1, pad = 1, dilation = 1):
+    def __init__(self, inplanes, planes, stride=1, pad=1, dilation=1):
         super(BasicDenseLayer, self).__init__()
 
         self.conv1 = preconv2d(inplanes, 4*planes, 1, 1, 0)
@@ -186,9 +197,10 @@ class BasicDenseLayer(nn.Module):
 
         return out
 
+
 class TransitionLayer(nn.Module):
 
-    def __init__(self, inplanes, reduction = 0.5, stride = 2):
+    def __init__(self, inplanes, reduction=0.5, stride=2):
         super(TransitionLayer, self).__init__()
 
         self.trans = nn.Sequential()
@@ -204,6 +216,7 @@ class TransitionLayer(nn.Module):
     def forward(self, x):
         out = self.trans(x)
         return out
+
 
 class _DenseLayer(nn.Module):
     def __init__(self, num_input_features, growth_rate, bn_size, drop_rate):
@@ -222,15 +235,19 @@ class _DenseLayer(nn.Module):
     def forward(self, x):
         new_features = self.dense(x)
         if self.drop_rate > 0:
-            new_features = F.dropout(new_features, p=self.drop_rate, training=self.training)
+            new_features = F.dropout(
+                new_features, p=self.drop_rate, training=self.training)
         return torch.cat([x, new_features], 1)
+
 
 class _DenseBlock(nn.Sequential):
     def __init__(self, num_layers, num_input_features, bn_size, growth_rate, drop_rate):
         super(_DenseBlock, self).__init__()
         for i in range(num_layers):
-            layer = _DenseLayer(num_input_features + i * growth_rate, growth_rate, bn_size, drop_rate)
+            layer = _DenseLayer(num_input_features + i *
+                                growth_rate, growth_rate, bn_size, drop_rate)
             self.add_module('denselayer%d' % (i + 1), layer)
+
 
 class _Transition(nn.Sequential):
     def __init__(self, num_input_features, num_output_features):
@@ -240,6 +257,7 @@ class _Transition(nn.Sequential):
         self.add_module('conv', nn.Conv2d(num_input_features, num_output_features,
                                           kernel_size=1, stride=1, bias=False))
         self.add_module('pool', nn.AvgPool2d(kernel_size=2, stride=2))
+
 
 class DenseFeature(nn.Module):
     def __init__(self, init_channels, growth_rate=8, scales=5, num_layers=6):
@@ -252,14 +270,13 @@ class DenseFeature(nn.Module):
         self.bn_size = 4
         self.num_blocks = scales
 
-        self.block0 = nn.Sequential(nn.Conv2d(3,  nC, 3, 1, 1), # 512x256
-                                    preconv2d(nC, nC, 3, 2, 1), # 256x128
+        self.block0 = nn.Sequential(nn.Conv2d(3,  nC, 3, 1, 1),  # 512x256
+                                    preconv2d(nC, nC, 3, 2, 1),  # 256x128
                                     nn.MaxPool2d(2, 2))  # new: downsample 4 times
-
 
         block_config = [self.num_layers] * self.num_blocks
         self.blocks = []
-        self.transs =[]
+        self.transs = []
 
         num_features = nC
         list_num_features = []
@@ -270,24 +287,23 @@ class DenseFeature(nn.Module):
             num_features = num_features + num_layers * self.growth_rate
             list_num_features.append(num_features)
             if i != len(block_config) - 1:
-                trans = _Transition(num_input_features=num_features, num_output_features=num_features // 2)
+                trans = _Transition(
+                    num_input_features=num_features, num_output_features=num_features // 2)
                 self.transs.append(trans)
                 num_features = num_features // 2
 
         self.blocks = nn.ModuleList(self.blocks)
         self.transs = nn.ModuleList(self.transs)
 
-
-
         self.upblocks = []
         for i in reversed(range(1, len(list_num_features))):
             self.upblocks.append(
-                nn.Sequential(preconv2d(list_num_features[i], list_num_features[i-1],3,1,1),
-                              preconv2d(list_num_features[i-1], list_num_features[i-1],3,1,1))
+                nn.Sequential(preconv2d(list_num_features[i], list_num_features[i-1], 3, 1, 1),
+                              preconv2d(list_num_features[i-1], list_num_features[i-1], 3, 1, 1))
             )
         self.upblocks = nn.ModuleList(self.upblocks)
 
-    def forward(self, x, timer = False):
+    def forward(self, x, timer=False):
         init_features = self.block0(x)
         features = []
         for i in range(self.num_blocks):
@@ -310,6 +326,7 @@ class AlexNet(nn.Module):
     """
     AlexNet backbone
     """
+
     def __init__(self):
         super(AlexNet, self).__init__()
         self.feature_channel = 256
@@ -340,11 +357,7 @@ class AlexNet(nn.Module):
         return x
 
 
-
-
-
-
-## resnet 50
+# resnet 50
 def conv1x1(in_planes, out_planes, stride=1):
     """1x1 convolution"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
@@ -433,7 +446,8 @@ class ResNet50_feature_extractor(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_normal_(
+                    m.weight, mode='fan_out', nonlinearity='relu')
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -492,16 +506,19 @@ class ResidualBlockCrop(nn.Module):
         self.p = p
 #         p = 0
         self.left = nn.Sequential(
-            nn.Conv2d(inchannel, outchannel, kernel_size=kernel_size, stride=stride, padding=p, bias=False),
+            nn.Conv2d(inchannel, outchannel, kernel_size=kernel_size,
+                      stride=stride, padding=p, bias=False),
             nn.BatchNorm2d(outchannel),
             nn.ReLU(inplace=True),
-            nn.Conv2d(outchannel, outchannel, kernel_size=kernel_size, stride=1, padding=p, bias=False),
+            nn.Conv2d(outchannel, outchannel, kernel_size=kernel_size,
+                      stride=1, padding=p, bias=False),
             nn.BatchNorm2d(outchannel)
         )
         self.shortcut = nn.Sequential()
         if stride != 1 or inchannel != outchannel:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(inchannel, outchannel, kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(inchannel, outchannel, kernel_size=1,
+                          stride=stride, bias=False),
                 nn.BatchNorm2d(outchannel)
             )
         self.activation = activation
@@ -510,14 +527,16 @@ class ResidualBlockCrop(nn.Module):
         out = self.left(x)
         out += self.shortcut(x)
         out = self.activation(out)
-        return out[:,:,self.p*2:-self.p*2,self.p*2:-self.p*2].contiguous()
+        return out[:, :, self.p*2:-self.p*2, self.p*2:-self.p*2].contiguous()
+
 
 class ResNet18Crop(nn.Module):
     def __init__(self, in_ch=3):
         super(ResNet18Crop, self).__init__()
         self.inchannel = 64
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_ch, 64, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.Conv2d(in_ch, 64, kernel_size=7,
+                      stride=2, padding=3, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
@@ -542,15 +561,11 @@ class ResNet18Crop(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
-        out = out[:,:,2:-2,2:-2].contiguous()
+        out = out[:, :, 2:-2, 2:-2].contiguous()
         out = self.layer1(out)
         out = self.layer2(out)
         # out = self.pool(out)
-        out = out[:,:,::2,::2].contiguous()
+        out = out[:, :, ::2, ::2].contiguous()
         out = self.layer3(out)
         out = self.layer4(out)
         return out
-
-
-
-

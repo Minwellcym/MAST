@@ -43,8 +43,9 @@ class myImageFloder(data.Dataset):
     def __getitem__(self, index):
         refs = self.refs[index]
 
-        images = [image_loader(os.path.join(self.filepath, ref))
-                  for ref in refs]
+        images = [
+            image_loader(os.path.join(self.filepath, ref))
+            for ref in refs]
 
         images_lab = [lab_preprocess(ref) for ref in images]
         images_rgb = [rgb_preprocess(ref) for ref in images]
